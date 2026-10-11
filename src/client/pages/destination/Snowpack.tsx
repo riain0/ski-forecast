@@ -1,6 +1,5 @@
-import { use } from 'react';
 import type { GeoPoint } from '#shared/types';
-import { loadAvalanche, loadSnotel } from '../../api/data';
+import { useAvalanche, useSnotel } from '../../api/data';
 import { Legend, TimeChart, type Tone } from '../../components/charts/TimeChart';
 import { formatters, monthDay, tick } from '../../lib/format';
 import { usePrefs } from '../../lib/prefs';
@@ -9,7 +8,7 @@ const STATION_TONES: Tone[] = ['s1', 's2', 's3'];
 
 export function Snowpack({ geo, country }: { geo: GeoPoint; country: string | undefined }) {
   const f = formatters(usePrefs().units);
-  const res = use(loadSnotel(geo, country));
+  const res = useSnotel(geo, country);
   if (!res.available) return <p className="dim">{res.reason}.</p>;
   const stations = res.data;
   if (stations.length === 0) return <p className="dim">No SNOTEL station within 45 km.</p>;
@@ -82,7 +81,7 @@ export function Snowpack({ geo, country }: { geo: GeoPoint; country: string | un
 }
 
 export function Avalanche({ geo, country }: { geo: GeoPoint; country: string | undefined }) {
-  const res = use(loadAvalanche(geo, country));
+  const res = useAvalanche(geo, country);
   if (!res.available) return <p className="dim">{res.reason}.</p>;
   const a = res.data;
   if (!a) return <p className="dim">No US avalanche center forecasts this area.</p>;

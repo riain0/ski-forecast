@@ -1,8 +1,8 @@
-import { use, useMemo } from 'react';
+import { useMemo } from 'react';
 import { consensusAccumulation } from '#shared/accumulate';
 import { localDate, localHour } from '#shared/time';
 import type { ForecastPoint, MultiModelForecast, Series, SnowMode } from '#shared/types';
-import { loadForecast } from '../../api/data';
+import { useForecast } from '../../api/data';
 import { Legend, TimeChart, type ChartLayer } from '../../components/charts/TimeChart';
 import { SnowCell, ViaNote } from '../../components/ui';
 import { formatters, hourLabel, monthDay, weekday, tick } from '../../lib/format';
@@ -19,7 +19,7 @@ export function ModelTable({
 }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data, via } = use(loadForecast(point));
+  const { data, via } = useForecast(point);
   const mode = prefs.snowMode;
   const today = localDate(data.time[data.nowIndex] ?? 0, data.utcOffset);
   const dates = data.consensus.daily.map(d => d.date).filter(d => d >= today);
@@ -159,7 +159,7 @@ function accumulationLayers(
 export function Accumulation({ point, selected }: { point: ForecastPoint; selected: string | null }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data } = use(loadForecast(point));
+  const { data } = useForecast(point);
   const { layers, runs, sel } = useMemo(
     () => accumulationLayers(data, prefs.snowMode, selected, f.snowValue),
     [data, prefs.snowMode, selected, f.snowValue],

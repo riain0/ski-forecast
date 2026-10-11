@@ -1,6 +1,5 @@
-import { use } from 'react';
 import type { ForecastPoint, ForecastWindow, GeoPoint, Stat } from '#shared/types';
-import { loadCurrent, loadForecast, loadNws } from '../../api/data';
+import { useCurrent, useForecast, useNws } from '../../api/data';
 import { WeatherIcon, WindArrow } from '../../components/Icons';
 import { TrailMark, gradeFor, gradeLabel } from '../../components/TrailGrade';
 import { ViaNote } from '../../components/ui';
@@ -10,7 +9,7 @@ import { describeWeather } from '../../lib/weather';
 
 export function Conditions({ point }: { point: ForecastPoint }) {
   const f = formatters(usePrefs().units);
-  const { data: c, via } = use(loadCurrent(point));
+  const { data: c, via } = useCurrent(point);
   const w = describeWeather(c.weatherCode);
   const fzAbove = c.freezingLevel != null ? c.freezingLevel - point.elevation : null;
   return (
@@ -76,7 +75,7 @@ const TOTALS: { key: ForecastWindow; label: string }[] = [
 export function Totals({ point }: { point: ForecastPoint }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data } = use(loadForecast(point));
+  const { data } = useForecast(point);
   const describe = (s: Stat | null) => {
     if (!s) return 'beyond model range';
     if (s.n === 1) return '1 model reaches this far';
@@ -108,7 +107,7 @@ export function Totals({ point }: { point: ForecastPoint }) {
 }
 
 export function Alerts({ geo, country }: { geo: GeoPoint; country: string | undefined }) {
-  const res = use(loadNws(geo, country));
+  const res = useNws(geo, country);
   if (!res.available || res.data.alerts.length === 0) return null;
   return (
     <div className="alerts" role="region" aria-label="Weather alerts">

@@ -13,6 +13,8 @@ export interface CachePolicy {
 export interface CacheResult<T> {
   value: T;
   state: 'hit' | 'stale' | 'miss';
+  /** How old the value is, in ms. */
+  ageMs: number;
 }
 
 /**
@@ -29,12 +31,12 @@ export class SwrCache {
     const entry = this.entries.get(key) as Entry<T> | undefined;
     const age = entry ? Date.now() - entry.storedAt : Infinity;
 
-    if (entry && age < policy.freshMs) return { value: entry.value, state: 'hit' };
+    if (entry && age < policy.freshMs) return { value: entry.value, state: 'hit', ageMs: age };
     if (entry && age < policy.freshMs + policy.staleMs) {
       this.refresh(key, load).catch(() => undefined);
-      return { value: entry.value, state: 'stale' };
+      return { value: entry.value, state: 'stale', ageMs: age };
     }
-    return { value: await this.refresh(key, load), state: 'miss' };
+    return { value: await this.refresh(key, load), state: 'miss', ageMs: 0 };
   }
 
   get size(): number {
@@ -71,7 +73,7 @@ const HOUR = 60 * MIN;
 /** Freshness tuned to how often each source actually changes. */
 export const POLICIES = {
   overview: { freshMs: 2 * HOUR, staleMs: 22 * HOUR },
-  multiModel: { freshMs: 1 * HOUR, staleMs: 11 * HOUR },
+  multiModel: { freshMs: 2 * HOUR, staleMs: 10 * HOUR },
   ensemble: { freshMs: 3 * HOUR, staleMs: 9 * HOUR },
   current: { freshMs: 20 * MIN, staleMs: 3 * HOUR },
   nws: { freshMs: 30 * MIN, staleMs: 6 * HOUR },

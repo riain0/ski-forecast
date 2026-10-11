@@ -35,7 +35,7 @@ src/
     sources/         NWS, SNOTEL, avalanche.org adapters
     app.ts           routes (zod-validated), CSP, compression, static client
   client/          React 19 + Vite
-    api/data.ts      server-first loading with direct-to-Open-Meteo fallback
+    api/data.ts      server-first loading, direct-to-Open-Meteo fallback, TanStack Query cache
     components/      SVG charts, icons, search, UI primitives
     pages/           Board, Map, Method, mountain page sections
 tests/             Vitest: snow physics, processors, cache, fetcher, NWS/avalanche helpers
@@ -56,6 +56,11 @@ built around that:
    midnight UTC) and serves stale data where it has it.
 4. **Browser fallback.** If the server is rate-limited, the browser calls Open-Meteo directly through the same
    shared code, spending the visitor's own quota. Ensembles, the heaviest request, load only when scrolled into view.
+
+5. **Browser cache.** TanStack Query keeps results in memory and persists each query to IndexedDB, with
+   freshness matched to model run cycles (`src/client/api/data.ts`). Reloads and return visits render from
+   saved data and refetch only what's stale. API responses carry `Cache-Control` headers derived from the
+   server cache's age, so browsers and any CDN can reuse them too.
 
 Setting `OPEN_METEO_API_KEY` switches the server to Open-Meteo's paid endpoints, which removes the shared-IP
 problem entirely (and is required for commercial use).

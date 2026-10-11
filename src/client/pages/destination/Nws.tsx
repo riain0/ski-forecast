@@ -1,6 +1,5 @@
-import { use } from 'react';
 import type { GeoPoint } from '#shared/types';
-import { loadNws } from '../../api/data';
+import { useNws } from '../../api/data';
 import { Section, SnowCell } from '../../components/ui';
 import { formatters, monthDay, relativeTime, weekday } from '../../lib/format';
 import { usePrefs } from '../../lib/prefs';
@@ -8,7 +7,7 @@ import { usePrefs } from '../../lib/prefs';
 /** National Weather Service section; renders nothing outside NWS coverage. */
 export function Nws({ geo, country }: { geo: GeoPoint; country: string | undefined }) {
   const f = formatters(usePrefs().units);
-  const res = use(loadNws(geo, country));
+  const res = useNws(geo, country);
   if (!res.available) return null;
   const n = res.data;
   const levels = new Map(n.snowLevel.map(s => [s.date, s]));

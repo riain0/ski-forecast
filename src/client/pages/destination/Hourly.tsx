@@ -1,7 +1,6 @@
-import { use } from 'react';
 import { localDate, localHour } from '#shared/time';
 import type { ForecastPoint, Series } from '#shared/types';
-import { loadForecast } from '../../api/data';
+import { useForecast } from '../../api/data';
 import { Legend, TimeChart } from '../../components/charts/TimeChart';
 import { Segmented } from '../../components/ui';
 import { formatters, hourLabel, weekday, tick } from '../../lib/format';
@@ -18,7 +17,7 @@ const RANGES = [
 export function Hourly({ point, place }: { point: ForecastPoint; place: Place }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data } = use(loadForecast(point));
+  const { data } = useForecast(point);
   const start = data.nowIndex;
   const hours = Math.min(prefs.hourlyRange, data.time.length - start);
   const slice = (s: Series) => s.slice(start, start + hours);

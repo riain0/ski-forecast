@@ -1,13 +1,12 @@
-import { use } from 'react';
 import type { ForecastPoint } from '#shared/types';
-import { loadCurrent } from '../../api/data';
+import { useCurrent } from '../../api/data';
 import { TimeChart } from '../../components/charts/TimeChart';
 import { formatters, monthDay, weekday, tick } from '../../lib/format';
 import { usePrefs } from '../../lib/prefs';
 
 export function History({ point }: { point: ForecastPoint }) {
   const f = formatters(usePrefs().units);
-  const { data } = use(loadCurrent(point));
+  const { data } = useCurrent(point);
   const h = data.history;
   const total = h.reduce((a, d) => a + d.snow, 0);
   return (

@@ -1,9 +1,9 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { use, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { DESTINATIONS } from '#shared/destinations';
 import type { OverviewWindow } from '#shared/types';
-import { loadOverview } from '../api/data';
+import { useOverview } from '../api/data';
 import { Boundary, Segmented } from '../components/ui';
 import { formatters, snowStep } from '../lib/format';
 import { setPrefs, usePrefs } from '../lib/prefs';
@@ -50,7 +50,7 @@ export function MapPage() {
 
 function SnowMap() {
   const prefs = usePrefs();
-  const { data } = use(loadOverview());
+  const { data } = useOverview();
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);

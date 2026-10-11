@@ -5,7 +5,17 @@
  * visitor. Free Open-Meteo quotas are per IP, though, and a host like Render shares egress IPs between many
  * apps. When the server reports it's rate limited (or is unreachable), the browser calls Open-Meteo directly
  * using the same shared client code, so each visitor spends their own quota instead.
+ *
+ * Results are cached by TanStack Query and each query is persisted to IndexedDB, so reloads and return
+ * visits render from saved data while anything stale refetches in the background.
  */
+import { QueryClient, queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  experimental_createQueryPersister,
+  type AsyncStorage,
+  type PersistedQuery,
+} from '@tanstack/react-query-persist-client';
+import { createStore, del as idbDel, entries as idbEntries, get as idbGet, set as idbSet } from 'idb-keyval';
 import { DESTINATIONS, elevationFor } from '#shared/destinations';
 import { UpstreamError } from '#shared/errors';
 import { OpenMeteoClient, type JsonFetcher } from '#shared/openmeteo/client';
@@ -103,96 +113,169 @@ async function serverFirst<T>(path: string, fallback: () => Promise<T>): Promise
 }
 
 // ---------------------------------------------------------------------------------------------
-// Promise cache for React's `use()`: stable promise identity per key, with expiry
+// Query cache: TanStack Query in memory, each query persisted to IndexedDB
 // ---------------------------------------------------------------------------------------------
 
-const promises = new Map<string, { promise: Promise<unknown>; expires: number }>();
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 
-function cached<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
-  const hit = promises.get(key);
-  if (hit && hit.expires > Date.now()) return hit.promise as Promise<T>;
-  const promise = load();
-  promises.set(key, { promise, expires: Date.now() + ttlMs });
-  promise.catch(() => promises.delete(key));
-  return promise;
+/**
+ * How long each kind of data stays current. Forecasts only change when a model run lands (hourly for HRRR
+ * and NBM, every 6 hours for the global models), so refetching more often than this just spends quota.
+ *
+ * - `staleTime`: after this, the data is still shown but refetched in the background.
+ * - `keepFor`: saved data older than this is discarded rather than shown.
+ */
+const FRESHNESS = {
+  overview: { staleTime: 1 * HOUR, keepFor: 1 * DAY },
+  forecast: { staleTime: 1 * HOUR, keepFor: 12 * HOUR },
+  ensemble: { staleTime: 3 * HOUR, keepFor: 1 * DAY },
+  current: { staleTime: 15 * MIN, keepFor: 3 * HOUR },
+  nws: { staleTime: 30 * MIN, keepFor: 6 * HOUR },
+  snotel: { staleTime: 1 * HOUR, keepFor: 12 * HOUR },
+  avalanche: { staleTime: 1 * HOUR, keepFor: 12 * HOUR },
+  geocode: { staleTime: 30 * DAY, keepFor: 30 * DAY },
+} as const;
+type Kind = keyof typeof FRESHNESS;
+
+/** IndexedDB via idb-keyval. Storage failures (private windows, full disks) just mean no persistence. */
+const idb = createStore('upslope', 'queries');
+const storage: AsyncStorage<PersistedQuery> = {
+  getItem: key => idbGet<PersistedQuery>(key, idb).catch(() => undefined),
+  setItem: (key, value) => idbSet(key, value, idb).catch(() => undefined),
+  removeItem: key => idbDel(key, idb).catch(() => undefined),
+  entries: () => idbEntries<string, PersistedQuery>(idb).catch((): [string, PersistedQuery][] => []),
+};
+
+const createPersister = (kind: Kind) =>
+  experimental_createQueryPersister<PersistedQuery>({
+    storage,
+    prefix: `upslope-${kind}`,
+    maxAge: FRESHNESS[kind].keepFor,
+    buster: __BUILD_ID__,
+    // IndexedDB stores objects directly (structured clone), so skip the JSON round trip.
+    serialize: q => q,
+    deserialize: q => q,
+  });
+const persisters = Object.fromEntries(
+  (Object.keys(FRESHNESS) as Kind[]).map(kind => [kind, createPersister(kind)]),
+) as Record<Kind, ReturnType<typeof createPersister>>;
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // The loaders already fall back from server to browser; retry once, and only what might be transient.
+      retry: (failures, err) =>
+        failures < 1 &&
+        !(err instanceof ApiError && (err.status === 400 || err.status === 404)) &&
+        !(err instanceof UpstreamError && err.rateLimited),
+    },
+  },
+});
+
+// Each kind of query (keyed by its first key segment) gets its freshness and its persister.
+for (const kind of Object.keys(FRESHNESS) as Kind[]) {
+  queryClient.setQueryDefaults([kind], {
+    staleTime: FRESHNESS[kind].staleTime,
+    // In-memory retention for unused queries; setTimeout can't schedule past ~24.8 days.
+    gcTime: Math.min(FRESHNESS[kind].keepFor, DAY),
+    persister: persisters[kind].persisterFn,
+  });
+}
+
+/** Removes expired and previous-build entries from IndexedDB once the page is idle. */
+export function cleanUpStorage() {
+  const run = () => {
+    for (const p of Object.values(persisters)) p.persisterGc().catch(() => undefined);
+    try {
+      localStorage.removeItem('upslope:overview:v2'); // the overview cache before TanStack Query
+    } catch {
+      // Storage unavailable.
+    }
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 10_000 });
+  else setTimeout(run, 5_000);
 }
 
 const pointQuery = (p: ForecastPoint) =>
   `lat=${p.lat.toFixed(3)}&lon=${p.lon.toFixed(3)}&elevation=${Math.round(p.elevation)}`;
-const pointKey = (p: ForecastPoint) => pointQuery(p);
-const MIN = 60_000;
-
-// ---------------------------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------------------------
-
-const OVERVIEW_STORE = 'upslope:overview:v2';
-const OVERVIEW_TTL = 90 * MIN;
-
-/** The all-mountains overview; also persisted locally so return visits render instantly. */
-export function loadOverview(): Promise<Sourced<Overview>> {
-  return cached('overview', OVERVIEW_TTL, async () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(OVERVIEW_STORE) ?? 'null') as Sourced<Overview> | null;
-      if (saved && Date.now() - Date.parse(saved.data.generatedAt) < OVERVIEW_TTL) return saved;
-    } catch {
-      // Ignore unreadable storage.
-    }
-    const result = await serverFirst('/api/overview', () =>
-      direct.overview(
-        DESTINATIONS.map(d => ({ id: d.id, lat: d.lat, lon: d.lon, elevation: elevationFor(d, 'mid') })),
-      ),
-    );
-    try {
-      localStorage.setItem(OVERVIEW_STORE, JSON.stringify(result));
-    } catch {
-      // Storage full or unavailable.
-    }
-    return result;
-  });
-}
-
-export const loadForecast = (p: ForecastPoint) =>
-  cached(`mm:${pointKey(p)}`, 30 * MIN, () =>
-    serverFirst<MultiModelForecast>(`/api/forecast?${pointQuery(p)}`, () => direct.multiModel(p)),
-  );
-
-export const loadEnsemble = (p: ForecastPoint) =>
-  cached(`ens:${pointKey(p)}`, 60 * MIN, () =>
-    serverFirst<EnsembleForecast>(`/api/ensemble?${pointQuery(p)}`, () => direct.ensemble(p)),
-  );
-
-export const loadCurrent = (p: ForecastPoint) =>
-  cached(`cur:${pointKey(p)}`, 15 * MIN, () =>
-    serverFirst<CurrentConditions>(`/api/current?${pointQuery(p)}`, () => direct.current(p)),
-  );
-
 const geoQuery = (g: GeoPoint, country?: string) =>
   `lat=${g.lat.toFixed(3)}&lon=${g.lon.toFixed(3)}${country ? `&country=${country}` : ''}`;
 
-export const loadNws = (g: GeoPoint, country?: string) =>
-  cached(`nws:${geoQuery(g, country)}`, 15 * MIN, () =>
-    getJson<Availability<NwsForecast>>(`/api/nws?${geoQuery(g, country)}`),
-  );
+// ---------------------------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------------------------
 
-export const loadSnotel = (g: GeoPoint, country?: string) =>
-  cached(`snotel:${geoQuery(g, country)}`, 30 * MIN, () =>
-    getJson<Availability<SnotelStation[]>>(`/api/snotel?${geoQuery(g, country)}`),
-  );
+const overviewQuery = queryOptions({
+  queryKey: ['overview' satisfies Kind],
+  queryFn: () =>
+    serverFirst<Overview>('/api/overview', () =>
+      direct.overview(
+        DESTINATIONS.map(d => ({ id: d.id, lat: d.lat, lon: d.lon, elevation: elevationFor(d, 'mid') })),
+      ),
+    ),
+});
 
-export const loadAvalanche = (g: GeoPoint, country?: string) =>
-  cached(`avy:${geoQuery(g, country)}`, 15 * MIN, () =>
-    getJson<Availability<AvalancheRating | null>>(`/api/avalanche?${geoQuery(g, country)}`),
-  );
+const forecastQuery = (p: ForecastPoint) =>
+  queryOptions({
+    queryKey: ['forecast' satisfies Kind, pointQuery(p)],
+    queryFn: () =>
+      serverFirst<MultiModelForecast>(`/api/forecast?${pointQuery(p)}`, () => direct.multiModel(p)),
+  });
 
-export const geocode = (q: string) =>
-  cached(
-    `geo:${q.toLowerCase()}`,
-    24 * 60 * MIN,
-    async () =>
+const ensembleQuery = (p: ForecastPoint) =>
+  queryOptions({
+    queryKey: ['ensemble' satisfies Kind, pointQuery(p)],
+    queryFn: () => serverFirst<EnsembleForecast>(`/api/ensemble?${pointQuery(p)}`, () => direct.ensemble(p)),
+  });
+
+const currentQuery = (p: ForecastPoint) =>
+  queryOptions({
+    queryKey: ['current' satisfies Kind, pointQuery(p)],
+    queryFn: () => serverFirst<CurrentConditions>(`/api/current?${pointQuery(p)}`, () => direct.current(p)),
+  });
+
+const nwsQuery = (g: GeoPoint, country?: string) =>
+  queryOptions({
+    queryKey: ['nws' satisfies Kind, geoQuery(g, country)],
+    queryFn: () => getJson<Availability<NwsForecast>>(`/api/nws?${geoQuery(g, country)}`),
+  });
+
+const snotelQuery = (g: GeoPoint, country?: string) =>
+  queryOptions({
+    queryKey: ['snotel' satisfies Kind, geoQuery(g, country)],
+    queryFn: () => getJson<Availability<SnotelStation[]>>(`/api/snotel?${geoQuery(g, country)}`),
+  });
+
+const avalancheQuery = (g: GeoPoint, country?: string) =>
+  queryOptions({
+    queryKey: ['avalanche' satisfies Kind, geoQuery(g, country)],
+    queryFn: () => getJson<Availability<AvalancheRating | null>>(`/api/avalanche?${geoQuery(g, country)}`),
+  });
+
+const geocodeQuery = (q: string) =>
+  queryOptions({
+    queryKey: ['geocode' satisfies Kind, q.toLowerCase()],
+    queryFn: async () =>
       (await serverFirst<GeocodeResult[]>(`/api/geocode?q=${encodeURIComponent(q)}`, () => direct.geocode(q)))
         .data,
-  );
+  });
+
+// ---------------------------------------------------------------------------------------------
+// Public API: Suspense hooks for components, plus imperative place search
+// ---------------------------------------------------------------------------------------------
+
+export const useOverview = () => useSuspenseQuery(overviewQuery).data;
+export const useForecast = (p: ForecastPoint) => useSuspenseQuery(forecastQuery(p)).data;
+export const useEnsemble = (p: ForecastPoint) => useSuspenseQuery(ensembleQuery(p)).data;
+export const useCurrent = (p: ForecastPoint) => useSuspenseQuery(currentQuery(p)).data;
+export const useNws = (g: GeoPoint, country?: string) => useSuspenseQuery(nwsQuery(g, country)).data;
+export const useSnotel = (g: GeoPoint, country?: string) => useSuspenseQuery(snotelQuery(g, country)).data;
+export const useAvalanche = (g: GeoPoint, country?: string) =>
+  useSuspenseQuery(avalancheQuery(g, country)).data;
+
+export const geocode = (q: string) => queryClient.query(geocodeQuery(q));
 
 /** Human message for a failed load. */
 export function describeError(err: unknown): string {

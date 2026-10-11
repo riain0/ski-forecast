@@ -1,7 +1,7 @@
-import { use, useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { DESTINATIONS, PASS_SEASON, REGIONS, elevationFor } from '#shared/destinations';
 import type { Destination, OverviewEntry, OverviewWindow, SnowMode } from '#shared/types';
-import { loadOverview } from '../api/data';
+import { useOverview } from '../api/data';
 import { StarIcon, WeatherIcon } from '../components/Icons';
 import { GRADES, TrailMark, gradeFor } from '../components/TrailGrade';
 import { Boundary, ViaNote } from '../components/ui';
@@ -30,7 +30,7 @@ export function BoardPage() {
 function Board() {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data, via } = use(loadOverview());
+  const { data, via } = useOverview();
   const [filter, setFilter] = useState('');
   const deferredFilter = useDeferredValue(filter.trim().toLowerCase());
 

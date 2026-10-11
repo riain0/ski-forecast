@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cacheControl } from '../src/server/app';
 import { SwrCache } from '../src/server/cache';
 import { createFetcher } from '../src/server/http';
 import { inRing } from '../src/server/sources/avalanche';
@@ -64,7 +65,7 @@ describe('SwrCache', () => {
     await cache.get('k', policy, async () => 'old');
     vi.advanceTimersByTime(2000);
     const stale = await cache.get('k', policy, () => Promise.reject(new Error('upstream down')));
-    expect(stale).toEqual({ value: 'old', state: 'stale' });
+    expect(stale).toMatchObject({ value: 'old', state: 'stale', ageMs: 2000 });
     await vi.runAllTimersAsync();
     expect((await cache.get('k', policy, async () => 'new')).value).toBe('old');
     vi.useRealTimers();
@@ -109,5 +110,17 @@ describe('avalanche zone lookup', () => {
   it('detects points inside and outside a ring', () => {
     expect(inRing([5, 5], square)).toBe(true);
     expect(inRing([15, 5], square)).toBe(false);
+  });
+});
+
+describe('cacheControl', () => {
+  const policy = { freshMs: 2 * 3600_000, staleMs: 10 * 3600_000 };
+  it('lets clients reuse a fresh value for the rest of its server freshness', () => {
+    expect(cacheControl(policy, { state: 'hit', ageMs: 3600_000 })).toBe(
+      'public, max-age=3600, stale-while-revalidate=36000',
+    );
+  });
+  it('asks clients to check back soon while a stale value is refreshing', () => {
+    expect(cacheControl(policy, { state: 'stale', ageMs: 3 * 3600_000 })).toMatch(/^public, max-age=60,/);
   });
 });

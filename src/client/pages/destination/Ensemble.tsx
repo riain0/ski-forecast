@@ -1,8 +1,7 @@
-import { use } from 'react';
 import { quantile } from '#shared/stats';
 import { localDate, localHour } from '#shared/time';
 import type { EnsembleForecast, EnsembleWindow, ForecastPoint, SnowMode } from '#shared/types';
-import { loadEnsemble } from '../../api/data';
+import { useEnsemble } from '../../api/data';
 import { Legend, TimeChart } from '../../components/charts/TimeChart';
 import { ViaNote } from '../../components/ui';
 import { formatters, hourLabel, weekday, tick } from '../../lib/format';
@@ -26,7 +25,7 @@ const WINDOWS: { key: EnsembleWindow; label: string }[] = [
 export function Ensemble({ point }: { point: ForecastPoint }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data, via } = use(loadEnsemble(point));
+  const { data, via } = useEnsemble(point);
   const mode = prefs.snowMode;
   const g = data.grand[mode];
   const conv = (s: (number | null)[]) => s.map(v => (v == null ? null : f.snowValue(v)));

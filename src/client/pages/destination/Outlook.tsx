@@ -1,14 +1,13 @@
-import { use } from 'react';
 import { localDate } from '#shared/time';
 import type { ForecastPoint } from '#shared/types';
-import { loadForecast } from '../../api/data';
+import { useForecast } from '../../api/data';
 import { formatters, monthDay, snowStep, weekday } from '../../lib/format';
 import { usePrefs } from '../../lib/prefs';
 
 export function Outlook({ point }: { point: ForecastPoint }) {
   const prefs = usePrefs();
   const f = formatters(prefs.units);
-  const { data } = use(loadForecast(point));
+  const { data } = useForecast(point);
   const today = localDate(data.time[data.nowIndex] ?? data.time[0] ?? 0, data.utcOffset);
   const days = data.consensus.daily.filter(d => d.date >= today && d.snow[prefs.snowMode]);
   const max = Math.max(5, ...days.map(d => d.snow[prefs.snowMode]?.median ?? 0));

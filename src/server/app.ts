@@ -10,7 +10,7 @@ import { compress } from 'hono/compress';
 import { HTTPException } from 'hono/http-exception';
 import { secureHeaders } from 'hono/secure-headers';
 import { z } from 'zod';
-import { POLICIES, SwrCache, type CachePolicy } from './cache';
+import { POLICIES, SwrCache, type CachePolicy, type CacheResult } from './cache';
 import type { Config } from './config';
 import { createFetcher } from './http';
 import { getAvalanche } from './sources/avalanche';
@@ -41,6 +41,19 @@ function parseQuery<S extends z.ZodType>(c: Context, schema: S): z.infer<S> {
   return parsed.data;
 }
 
+/**
+ * Lets browsers and any CDN reuse a response for as long as the server would treat it as fresh. A stale
+ * value is being refreshed right now, so it gets only a minute before clients should ask again.
+ */
+export function cacheControl(
+  policy: CachePolicy,
+  { state, ageMs }: Pick<CacheResult<unknown>, 'state' | 'ageMs'>,
+) {
+  const fresh = state === 'stale' ? 60 : Math.max(60, Math.round((policy.freshMs - ageMs) / 1000));
+  const swr = Math.round(policy.staleMs / 1000);
+  return `public, max-age=${fresh}, stale-while-revalidate=${swr}`;
+}
+
 /** The US agencies cover the US only; skip them for known non-US destinations. */
 const outsideUs = (country: string | undefined) => country !== undefined && country !== 'US';
 
@@ -63,10 +76,11 @@ export function createApp(config: Config) {
 
   /** Runs a cached loader and writes the result with matching HTTP cache headers. */
   async function respond<T>(c: Context, key: string, policy: CachePolicy, load: () => Promise<T>) {
-    const { value, state } = await cache.get(key, policy, load);
-    c.header('Cache-Control', `public, max-age=${Math.min(600, Math.round(policy.freshMs / 1000))}`);
-    c.header('X-Cache', state);
-    return c.json(value as object);
+    const result = await cache.get(key, policy, load);
+    c.header('Cache-Control', cacheControl(policy, result));
+    c.header('Age', String(Math.round(result.ageMs / 1000)));
+    c.header('X-Cache', result.state);
+    return c.json(result.value as object);
   }
 
   const app = new Hono();
