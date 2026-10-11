@@ -1,0 +1,19 @@
+{
+  "name": "ikon-snow",
+  "version": "1.0.0",
+  "description": "Ski-focused multi-model snow forecasting for Ikon Pass destinations",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "compression": "^1.7.5",
+    "express": "^4.21.2"
+  }
+}

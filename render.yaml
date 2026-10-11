@@ -1,0 +1,17 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: ikon-snow
+    runtime: node
+    plan: free            # upgrade to "starter" to avoid cold starts after 15 min idle
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CONTACT_EMAIL        # optional: sent in the User-Agent to api.weather.gov (NWS asks for contact info)
+        sync: false
+      - key: OPEN_METEO_API_KEY   # optional: paid Open-Meteo key for commercial use / higher limits
+        sync: false

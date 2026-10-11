@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ikon Snow Forecast</title>
+  <meta name="description" content="Multi-model snow forecasts, ensembles, NWS discussions, SNOTEL and avalanche danger for Ikon Pass destinations.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 28 13 8l5 9 3-5 9 16z' fill='%232a78d6'/%3E%3Cpath d='m13 8 3 5.5-3-1.5-2.4 2z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="brand" aria-label="Ikon Snow home">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M2 28 13 8l5 9 3-5 9 16z" fill="var(--series-1)"/><path d="m13 8 3 5.5-3-1.5-2.4 2z" fill="#fff"/></svg>
+      <span>Ikon<b>Snow</b></span>
+    </a>
+    <nav class="nav">
+      <a href="#/" data-nav="dash">Dashboard</a>
+      <a href="#/map" data-nav="map">Map</a>
+      <a href="#/models" data-nav="models">Models</a>
+    </nav>
+    <div class="search">
+      <input id="search" type="search" placeholder="Find a resort, town, or lat,lon…" autocomplete="off" aria-label="Search resorts and places">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <div class="toggles">
+      <div class="seg" role="group" aria-label="Units">
+        <button data-units="imperial">in / °F</button><button data-units="metric">cm / °C</button>
+      </div>
+      <div class="seg" role="group" aria-label="Snow calculation" title="Smart: elevation-aware rain/snow split + temperature-based snow ratio. Raw: model output at fixed ~7:1 ratio.">
+        <button data-snow="smart">Smart</button><button data-snow="raw">Raw</button>
+      </div>
+      <button id="theme" class="icon-btn" aria-label="Toggle dark mode" title="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="footer">
+    <p>Forecast data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (ECMWF, NOAA, DWD, ECCC, UKMO, Météo-France, JMA, CMA, MeteoSwiss, ItaliaMeteo; CC BY 4.0) ·
+      <a href="https://www.weather.gov/" target="_blank" rel="noopener">NOAA NWS</a> ·
+      <a href="https://www.nrcs.usda.gov/wps/portal/wcc/home/" target="_blank" rel="noopener">USDA NRCS SNOTEL</a> ·
+      <a href="https://avalanche.org/" target="_blank" rel="noopener">avalanche.org</a> · Map tiles © Esri</p>
+    <p class="muted">Independent fan project — not affiliated with Ikon Pass or Alterra Mountain Company. Always check official resort reports and your local avalanche center.</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
