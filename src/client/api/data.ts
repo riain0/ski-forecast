@@ -280,6 +280,18 @@ export const prefetchOverview = (): void => {
   queryClient.query(overviewQuery).catch(() => undefined);
 };
 
+/**
+ * Warms the cache for the top of one place's forecast page: current conditions, the model forecast and
+ * the NWS forecast. Each is keyed by the place's point, so every mountain is cached separately, and fresh
+ * cached data is not fetched again.
+ */
+export function prefetchPlace(p: ForecastPoint, g: GeoPoint, country?: string): void {
+  const ignore = () => undefined;
+  queryClient.query(currentQuery(p)).catch(ignore);
+  queryClient.query(forecastQuery(p)).catch(ignore);
+  queryClient.query(nwsQuery(g, country)).catch(ignore);
+}
+
 export const geocode = (q: string) => queryClient.query(geocodeQuery(q));
 
 /** Human message for a failed load. */

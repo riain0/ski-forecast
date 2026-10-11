@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { DESTINATIONS } from '#shared/destinations';
 import type { OverviewWindow } from '#shared/types';
 import { useOverview } from '../api/data';
+import { prefetchOnHover } from '../lib/prefetch';
 import { Boundary, Segmented } from '../components/ui';
 import { formatters, snowStep } from '../lib/format';
 import { setPrefs, usePrefs } from '../lib/prefs';
@@ -104,6 +105,12 @@ function SnowMap() {
       })
         .bindTooltip(`${d.name} · ${f.snow(v)}`, { direction: 'top', offset: [0, -10] })
         .on('click', () => navigate(hrefFor.destination(d.id)))
+        .on('mouseover', function (this: L.Marker & { cancelPrefetch?: () => void }) {
+          this.cancelPrefetch = prefetchOnHover(hrefFor.destination(d.id));
+        })
+        .on('mouseout', function (this: L.Marker & { cancelPrefetch?: () => void }) {
+          this.cancelPrefetch?.();
+        })
         .addTo(group);
     }
   }, [data, prefs.mapWindow, prefs.snowMode, prefs.units]);

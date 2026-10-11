@@ -1,53 +1,74 @@
-import { prefetchOverview } from '../api/data';
+import { prefetchOverview, prefetchPlace } from '../api/data';
 import { loadPage } from './pages';
+import { placeFromRoute, pointFor } from './place';
+import { getPrefs } from './prefs';
 import { parseRoute } from './routes';
 
-/** Hover this long before prefetching, so passing the pointer over a link doesn't count as intent. */
-const HOVER_INTENT_MS = 100;
+/**
+ * How long the pointer must rest on a link before we prefetch. Mountain pages cost forecast quota per
+ * mountain, so they need a more deliberate hover than the nav tabs; passing over rows prefetches nothing.
+ */
+const HOVER_INTENT_MS = { page: 100, place: 250 };
 
 const saveData = () =>
   (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
 
 const ignore = () => undefined;
 
+const routeOf = (href: string) => {
+  const url = new URL(href, location.origin);
+  return url.origin === location.origin ? parseRoute(url.pathname, url.search) : null;
+};
+
 /**
- * Loads what an in-app URL needs before it's clicked: the page's code, plus the overview data for the
- * board and map. Mountain pages get their code only, since their forecasts cost quota per mountain.
- * Safe to call repeatedly: chunks load once and fresh cached data isn't refetched.
+ * Loads what an in-app URL needs before it's clicked: the page's code and the data for its first screen.
+ * Safe to call repeatedly: chunks load once, and each query is cached under its own key.
  */
 export function prefetch(href: string): void {
   if (saveData()) return;
-  const url = new URL(href, location.origin);
-  if (url.origin !== location.origin) return;
+  const route = routeOf(href);
+  if (!route) return;
 
-  switch (parseRoute(url.pathname, url.search).name) {
+  switch (route.name) {
     case 'board':
       prefetchOverview();
-      break;
+      return;
     case 'map':
       loadPage.map().catch(ignore);
       prefetchOverview();
-      break;
+      return;
     case 'method':
       loadPage.method().catch(ignore);
-      break;
+      return;
     case 'destination':
-    case 'spot':
+    case 'spot': {
+      const place = placeFromRoute(route);
+      if (!place) return;
       loadPage.destination().catch(ignore);
-      break;
+      prefetchPlace(pointFor(place, getPrefs().band), { lat: place.lat, lon: place.lon }, place.country);
+      return;
+    }
     case 'not-found':
-      break;
+      return;
   }
 }
 
-/** Event props for a link: prefetch after a short mouse hover, or immediately on keyboard focus or touch. */
+/** Starts a prefetch after the hover-intent delay for this kind of page; returns a cancel function. */
+export function prefetchOnHover(href: string): () => void {
+  const name = routeOf(href)?.name;
+  const delay = name === 'destination' || name === 'spot' ? HOVER_INTENT_MS.place : HOVER_INTENT_MS.page;
+  const timer = setTimeout(() => prefetch(href), delay);
+  return () => clearTimeout(timer);
+}
+
+/** Event props for a link: prefetch after a mouse hover, or immediately on keyboard focus or touch. */
 export function prefetchIntent(href: string) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancel: (() => void) | undefined;
   return {
     onPointerEnter: (e: { pointerType: string }) => {
-      if (e.pointerType === 'mouse') timer = setTimeout(() => prefetch(href), HOVER_INTENT_MS);
+      if (e.pointerType === 'mouse') cancel = prefetchOnHover(href);
     },
-    onPointerLeave: () => clearTimeout(timer),
+    onPointerLeave: () => cancel?.(),
     onFocus: () => prefetch(href),
     onTouchStart: () => prefetch(href),
   };

@@ -63,6 +63,7 @@ const subscribe = (l: () => void) => {
 };
 
 export const usePrefs = (): Prefs => useSyncExternalStore(subscribe, () => state);
+export const getPrefs = (): Prefs => state;
 
 export const toggleStar = (id: string) =>
   setPrefs(p => ({ starred: p.starred.includes(id) ? p.starred.filter(s => s !== id) : [...p.starred, id] }));
