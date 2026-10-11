@@ -1,0 +1,132 @@
+/*
+ * Design tokens. Paper-and-ink "patrol bulletin" palette: warm paper, near-black ink, one signal red,
+ * and a single-hue glacier ramp for snow magnitude. Dark theme re-steps every value for the night surface.
+ */
+:root {
+  color-scheme: light;
+
+  --font-display: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+  --paper: #efece4;
+  --paper-raised: #f6f4ee;
+  --paper-sunk: #e5e1d6;
+  --ink: #15171a;
+  --ink-2: #45474b;
+  --ink-3: #6e6f6c;
+  --rule: #cdc7b8;
+  --rule-strong: #15171a;
+  --masthead: #15171a;
+  --masthead-ink: #efece4;
+  --masthead-dim: #9a988f;
+  --signal: #c6361c;
+  --focus: #c6361c;
+
+  /* Snow magnitude: one hue, light → deep. */
+  --snow-0: transparent;
+  --snow-1: #dde9f3;
+  --snow-2: #b9d2e8;
+  --snow-3: #8db4d9;
+  --snow-4: #5e93c6;
+  --snow-5: #3874ae;
+  --snow-6: #23578e;
+  --snow-7: #163c68;
+  --on-snow-light: #15171a;
+  --on-snow-dark: #f6f4ee;
+
+  /* Chart roles. */
+  --chart-model: #b7b1a2;
+  --chart-band: rgba(56, 116, 174, 0.22);
+  --chart-band-strong: rgba(56, 116, 174, 0.38);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+
+  /* Trail-marker grades. */
+  --trail-green: #2f8f4e;
+  --trail-blue: #2563ae;
+  --trail-black: #15171a;
+
+  /* North American avalanche danger scale (fixed by convention). */
+  --danger-1: #50b848;
+  --danger-2: #fff200;
+  --danger-3: #f7941e;
+  --danger-4: #ed1c24;
+  --danger-5: #231f20;
+
+  --page-pad: clamp(16px, 3.2vw, 36px);
+  --max: 1320px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --paper: #101215;
+    --paper-raised: #16191d;
+    --paper-sunk: #0b0c0e;
+    --ink: #e9e6dd;
+    --ink-2: #b4b1a8;
+    --ink-3: #85837c;
+    --rule: #2a2e34;
+    --rule-strong: #e9e6dd;
+    --masthead: #08090b;
+    --masthead-ink: #e9e6dd;
+    --masthead-dim: #85837c;
+    --signal: #ef6a4c;
+    --focus: #ef6a4c;
+    --snow-1: #1a2633;
+    --snow-2: #1f3954;
+    --snow-3: #2a5480;
+    --snow-4: #3a70a8;
+    --snow-5: #5590c9;
+    --snow-6: #82b2e0;
+    --snow-7: #c0daf2;
+    --on-snow-light: #e9e6dd;
+    --on-snow-dark: #0b0c0e;
+    --chart-model: #4a4d52;
+    --chart-band: rgba(85, 144, 201, 0.22);
+    --chart-band-strong: rgba(85, 144, 201, 0.4);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --trail-green: #3fae63;
+    --trail-blue: #4a8ad8;
+    --trail-black: #e9e6dd;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #101215;
+  --paper-raised: #16191d;
+  --paper-sunk: #0b0c0e;
+  --ink: #e9e6dd;
+  --ink-2: #b4b1a8;
+  --ink-3: #85837c;
+  --rule: #2a2e34;
+  --rule-strong: #e9e6dd;
+  --masthead: #08090b;
+  --masthead-ink: #e9e6dd;
+  --masthead-dim: #85837c;
+  --signal: #ef6a4c;
+  --focus: #ef6a4c;
+  --snow-1: #1a2633;
+  --snow-2: #1f3954;
+  --snow-3: #2a5480;
+  --snow-4: #3a70a8;
+  --snow-5: #5590c9;
+  --snow-6: #82b2e0;
+  --snow-7: #c0daf2;
+  --on-snow-light: #e9e6dd;
+  --on-snow-dark: #0b0c0e;
+  --chart-model: #4a4d52;
+  --chart-band: rgba(85, 144, 201, 0.22);
+  --chart-band-strong: rgba(85, 144, 201, 0.4);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --trail-green: #3fae63;
+  --trail-blue: #4a8ad8;
+  --trail-black: #e9e6dd;
+}
