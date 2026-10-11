@@ -13,7 +13,7 @@ const MapPage = lazy(() => loadPage.map().then(m => ({ default: m.MapPage })));
 const MethodPage = lazy(() => loadPage.method().then(m => ({ default: m.MethodPage })));
 
 export function App() {
-  const location = useLocation();
+  const { location, pending } = useLocation();
   const route = parseRoute(
     location.split('?')[0] ?? '/',
     location.includes('?') ? location.slice(location.indexOf('?')) : '',
@@ -35,6 +35,7 @@ export function App() {
       <a className="skip" href="#main">
         Skip to content
       </a>
+      {pending && <div className="route-progress" aria-hidden="true" />}
       <Masthead route={route} />
       <div id="main">
         {route.name === 'board' && <BoardPage />}
