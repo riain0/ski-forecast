@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Masthead } from './components/Masthead';
+import { loadPage } from './lib/pages';
 import { placeFromRoute } from './lib/place';
 import { usePrefs } from './lib/prefs';
 import { Link, parseRoute, useLocation } from './lib/router';
@@ -7,11 +8,9 @@ import { BoardPage } from './pages/Board';
 import { Placeholder } from './components/ui';
 
 // Only the board ships in the main bundle; the other pages load when visited.
-const DestinationPage = lazy(() =>
-  import('./pages/destination/DestinationPage').then(m => ({ default: m.DestinationPage })),
-);
-const MapPage = lazy(() => import('./pages/MapPage').then(m => ({ default: m.MapPage })));
-const MethodPage = lazy(() => import('./pages/Method').then(m => ({ default: m.MethodPage })));
+const DestinationPage = lazy(() => loadPage.destination().then(m => ({ default: m.DestinationPage })));
+const MapPage = lazy(() => loadPage.map().then(m => ({ default: m.MapPage })));
+const MethodPage = lazy(() => loadPage.method().then(m => ({ default: m.MethodPage })));
 
 export function App() {
   const location = useLocation();

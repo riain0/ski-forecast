@@ -1,6 +1,6 @@
 import { findDestination, elevationFor } from '#shared/destinations';
 import type { Destination, ElevationBand, ForecastPoint } from '#shared/types';
-import type { Route } from './router';
+import type { Route } from './routes';
 
 /** Anything the forecast page can show: a pass destination or a searched-for spot. */
 export interface Place {

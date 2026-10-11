@@ -275,6 +275,11 @@ export const useSnotel = (g: GeoPoint, country?: string) => useSuspenseQuery(sno
 export const useAvalanche = (g: GeoPoint, country?: string) =>
   useSuspenseQuery(avalancheQuery(g, country)).data;
 
+/** Warms the all-mountains overview that the board and map draw. A fresh cached copy is left alone. */
+export const prefetchOverview = (): void => {
+  queryClient.query(overviewQuery).catch(() => undefined);
+};
+
 export const geocode = (q: string) => queryClient.query(geocodeQuery(q));
 
 /** Human message for a failed load. */
