@@ -4,10 +4,12 @@ import { placeFromRoute } from './lib/place';
 import { usePrefs } from './lib/prefs';
 import { Link, parseRoute, useLocation } from './lib/router';
 import { BoardPage } from './pages/Board';
-import { DestinationPage } from './pages/destination/DestinationPage';
 import { Placeholder } from './components/ui';
 
-// Leaflet and the method page's prose only load when visited.
+// Only the board ships in the main bundle; the other pages load when visited.
+const DestinationPage = lazy(() =>
+  import('./pages/destination/DestinationPage').then(m => ({ default: m.DestinationPage })),
+);
 const MapPage = lazy(() => import('./pages/MapPage').then(m => ({ default: m.MapPage })));
 const MethodPage = lazy(() => import('./pages/Method').then(m => ({ default: m.MethodPage })));
 
@@ -40,8 +42,8 @@ export function App() {
         <Suspense fallback={<Placeholder height={480} />}>
           {route.name === 'map' && <MapPage />}
           {route.name === 'method' && <MethodPage />}
+          {place && <DestinationPage key={place.key} place={place} />}
         </Suspense>
-        {place && <DestinationPage key={place.key} place={place} />}
         {(route.name === 'not-found' ||
           ((route.name === 'destination' || route.name === 'spot') && !place)) && (
           <main className="page">

@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { cleanUpStorage, queryClient } from './api/data';
 import { App } from './App';
+import './styles/fonts';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/app.css';

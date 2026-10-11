@@ -91,12 +91,13 @@ export function createApp(config: Config) {
       contentSecurityPolicy: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https://server.arcgisonline.com'],
         connectSrc: ["'self'", 'https://*.open-meteo.com'],
         frameAncestors: ["'none'"],
       },
+      strictTransportSecurity: 'max-age=63072000; includeSubDomains',
     }),
   );
   app.use('*', compress());
@@ -178,7 +179,17 @@ export function createApp(config: Config) {
       },
     }),
   );
-  app.use('*', serveStatic({ root: config.CLIENT_DIR }));
+  // Unhashed public files (favicon, theme script, robots.txt) can change on deploy, so cache them briefly.
+  app.use(
+    '*',
+    serveStatic({
+      root: config.CLIENT_DIR,
+      onFound: (path, c) => {
+        if (!path.endsWith('.html'))
+          c.header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+      },
+    }),
+  );
   app.get('*', serveStatic({ root: config.CLIENT_DIR, path: 'index.html' }));
 
   app.onError((err, c) => {

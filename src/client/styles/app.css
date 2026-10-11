@@ -156,8 +156,7 @@
   background: none;
   padding: 6px 11px;
   font: 500 13px/1 var(--font-mono);
-  color: inherit;
-  opacity: 0.7;
+  color: var(--ink-2);
 }
 .seg button + button {
   border-left: 1px solid currentColor;
@@ -165,13 +164,13 @@
 .seg button.is-on {
   background: var(--ink);
   color: var(--paper);
-  opacity: 1;
 }
 .seg--sm button {
   padding: 5px 8px;
   font-size: 12px;
 }
-.masthead .seg {
+.masthead .seg,
+.masthead .seg button {
   color: var(--masthead-dim);
 }
 .masthead .seg button.is-on {
