@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { CustomSpot, ElevationBand, OverviewWindow, SnowMode } from '#shared/types';
+import type { PassFilter } from './passes';
 
 export type Units = 'us' | 'metric';
 export type Theme = 'system' | 'light' | 'dark';
@@ -13,6 +14,8 @@ export interface Prefs {
   starred: string[];
   spots: CustomSpot[];
   boardRegion: string;
+  /** Pass filter shared by the board and the map. */
+  pass: PassFilter;
   boardSort: BoardSort;
   boardSortDesc: boolean;
   hourlyRange: number;
@@ -29,6 +32,7 @@ const DEFAULTS: Prefs = {
   starred: [],
   spots: [],
   boardRegion: 'All',
+  pass: 'all',
   boardSort: 'next72',
   boardSortDesc: true,
   hourlyRange: 72,

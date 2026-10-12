@@ -36,9 +36,14 @@ export type Region =
   | 'Australia & NZ'
   | 'South America';
 
+/** Multi-resort season passes we track. A destination on none of them is independent. */
+export type Pass = 'ikon' | 'epic' | 'mountain-collective' | 'indy';
+
 export interface Destination extends GeoPoint {
   id: string;
   name: string;
+  /** Passes that include this mountain for the current season; empty for independents. */
+  passes: readonly Pass[];
   /** Umbrella destination on the pass, when one pass entry covers several mountains (e.g. SkiBig3). */
   group?: string;
   region: Region;
@@ -52,7 +57,7 @@ export interface Destination extends GeoPoint {
   url?: string;
 }
 
-/** A user-saved location that isn't on the pass. */
+/** A user-saved location that isn't in the destination list. */
 export interface CustomSpot extends GeoPoint {
   id: string;
   name: string;

@@ -7,6 +7,7 @@ import { useOverview } from '../api/data';
 import { prefetchOnHover } from '../lib/prefetch';
 import { Boundary, Segmented } from '../components/ui';
 import { formatters, snowStep } from '../lib/format';
+import { PASS_FILTERS, matchesPass, passShort } from '../lib/passes';
 import { setPrefs, usePrefs } from '../lib/prefs';
 import { hrefFor, navigate } from '../lib/router';
 
@@ -26,12 +27,20 @@ export function MapPage() {
     <main className="page page--map">
       <div className="map-head">
         <h1 className="headline headline--sm">Forecast snow, mid-mountain</h1>
-        <Segmented
-          label="Forecast window"
-          value={prefs.mapWindow}
-          options={WINDOWS}
-          onChange={mapWindow => setPrefs({ mapWindow })}
-        />
+        <div className="map-controls">
+          <Segmented
+            label="Filter by pass"
+            value={prefs.pass}
+            options={PASS_FILTERS}
+            onChange={pass => setPrefs({ pass })}
+          />
+          <Segmented
+            label="Forecast window"
+            value={prefs.mapWindow}
+            options={WINDOWS}
+            onChange={mapWindow => setPrefs({ mapWindow })}
+          />
+        </div>
       </div>
       <Boundary height={520} label="Loading map">
         <SnowMap />
@@ -88,7 +97,7 @@ function SnowMap() {
     group.clearLayers();
     for (const d of DESTINATIONS) {
       const o = byId.get(d.id);
-      if (!o) continue;
+      if (!o || !matchesPass(d, prefs.pass)) continue;
       const v = o.windows[prefs.mapWindow][prefs.snowMode]?.mean ?? null;
       const step = Math.max(0, snowStep(v));
       const icon = L.divIcon({
@@ -103,7 +112,7 @@ function SnowMap() {
         riseOnHover: true,
         zIndexOffset: Math.round((v ?? 0) * 10),
       })
-        .bindTooltip(`${d.name} · ${f.snow(v)}`, { direction: 'top', offset: [0, -10] })
+        .bindTooltip(`${d.name} · ${f.snow(v)} · ${passShort(d)}`, { direction: 'top', offset: [0, -10] })
         .on('click', () => navigate(hrefFor.destination(d.id)))
         .on('mouseover', function (this: L.Marker & { cancelPrefetch?: () => void }) {
           this.cancelPrefetch = prefetchOnHover(hrefFor.destination(d.id));
@@ -113,7 +122,7 @@ function SnowMap() {
         })
         .addTo(group);
     }
-  }, [data, prefs.mapWindow, prefs.snowMode, prefs.units]);
+  }, [data, prefs.mapWindow, prefs.snowMode, prefs.units, prefs.pass]);
 
   return <div ref={el} className="snow-map" role="application" aria-label="Map of forecast snowfall" />;
 }

@@ -3,6 +3,7 @@ import type { ElevationBand } from '#shared/types';
 import { StarIcon } from '../../components/Icons';
 import { Boundary, Section } from '../../components/ui';
 import { formatters } from '../../lib/format';
+import { passLabel } from '../../lib/passes';
 import { isSinglePoint, pointFor, type Place } from '../../lib/place';
 import { setPrefs, toggleStar, usePrefs } from '../../lib/prefs';
 import { Alerts, Conditions, Totals } from './Conditions';
@@ -32,7 +33,9 @@ export function DestinationPage({ place }: { place: Place }) {
     <main className="page page--destination">
       <header className="title-block">
         <div>
-          <p className="eyebrow">{d ? `Ikon Pass · ${place.subtitle}` : `Custom spot · ${place.subtitle}`}</p>
+          <p className="eyebrow">
+            {d ? `${passLabel(d)} · ${place.subtitle}` : `Custom spot · ${place.subtitle}`}
+          </p>
           <h1 className="title-block__name">
             {place.name}
             {d && (

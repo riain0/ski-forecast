@@ -4,8 +4,9 @@ import type { Destination, OverviewEntry, OverviewWindow, SnowMode } from '#shar
 import { useOverview } from '../api/data';
 import { StarIcon, WeatherIcon } from '../components/Icons';
 import { GRADES, TrailMark, gradeFor } from '../components/TrailGrade';
-import { Boundary, ViaNote } from '../components/ui';
+import { Boundary, Segmented, ViaNote } from '../components/ui';
 import { formatters, relativeTime, snowStep, weekday, type Formatters } from '../lib/format';
+import { PASS_FILTERS, matchesPass, passScope, passShort } from '../lib/passes';
 import { setPrefs, toggleStar, usePrefs, type BoardSort } from '../lib/prefs';
 import { Link, hrefFor } from '../lib/router';
 import { describeWeather } from '../lib/weather';
@@ -34,13 +35,18 @@ function Board() {
   const [filter, setFilter] = useState('');
   const deferredFilter = useDeferredValue(filter.trim().toLowerCase());
 
+  // The pass filter scopes the whole page (headline, leaders, table); regions only narrow the table.
   const rows: Row[] = useMemo(() => {
     const byId = new Map(data.entries.map(e => [e.id, e]));
     return DESTINATIONS.flatMap(d => {
       const o = byId.get(d.id);
-      return o ? [{ d, o }] : [];
+      return o && matchesPass(d, prefs.pass) ? [{ d, o }] : [];
     });
-  }, [data]);
+  }, [data, prefs.pass]);
+  const regions = REGIONS.filter(r => rows.some(row => row.d.region === r));
+  // A region with no mountains on the chosen pass has no tab, so fall back to showing all of them.
+  const tabs: readonly string[] = ['All', 'Starred', ...regions];
+  const region = tabs.includes(prefs.boardRegion) ? prefs.boardRegion : 'All';
 
   const leaders = (w: OverviewWindow) =>
     [...rows]
@@ -50,16 +56,12 @@ function Board() {
 
   const visible = rows
     .filter(r =>
-      prefs.boardRegion === 'All'
-        ? true
-        : prefs.boardRegion === 'Starred'
-          ? prefs.starred.includes(r.d.id)
-          : r.d.region === prefs.boardRegion,
+      region === 'All' ? true : region === 'Starred' ? prefs.starred.includes(r.d.id) : r.d.region === region,
     )
     .filter(
       r =>
         !deferredFilter ||
-        `${r.d.name} ${r.d.group ?? ''} ${r.d.region} ${r.d.admin ?? ''}`
+        `${r.d.name} ${r.d.group ?? ''} ${r.d.region} ${r.d.admin ?? ''} ${passShort(r.d)}`
           .toLowerCase()
           .includes(deferredFilter),
     )
@@ -106,7 +108,7 @@ function Board() {
           })}
         </span>
         <span>
-          {rows.length} mountains · Ikon {PASS_SEASON}
+          {rows.length} mountains · {PASS_SEASON} season
         </span>
         <span>
           {data.models.join(' + ')} blend at mid-mountain · updated {relativeTime(data.generatedAt)}{' '}
@@ -121,7 +123,7 @@ function Board() {
             days
           </>
         ) : (
-          <>A quiet three days across the pass</>
+          <>A quiet three days across {passScope(prefs.pass)}</>
         )}
       </h1>
 
@@ -150,13 +152,23 @@ function Board() {
         />
       </div>
 
+      <div className="board-pass">
+        <span className="eyebrow">Pass</span>
+        <Segmented
+          label="Filter by pass"
+          value={prefs.pass}
+          options={PASS_FILTERS}
+          onChange={pass => setPrefs({ pass })}
+        />
+      </div>
+
       <div className="board-controls">
         <nav className="tabs" aria-label="Filter by region">
-          {['All', 'Starred', ...REGIONS].map(r => (
+          {tabs.map(r => (
             <button
               key={r}
               type="button"
-              aria-pressed={prefs.boardRegion === r}
+              aria-pressed={region === r}
               onClick={() => setPrefs({ boardRegion: r })}
             >
               {r}
@@ -204,9 +216,9 @@ function Board() {
             {visible.length === 0 && (
               <tr>
                 <td colSpan={9} className="empty">
-                  {prefs.boardRegion === 'Starred'
+                  {region === 'Starred' && prefs.starred.length === 0
                     ? 'Star a mountain to pin it here.'
-                    : 'Nothing matches that filter.'}
+                    : 'Nothing matches those filters.'}
                 </td>
               </tr>
             )}
@@ -307,6 +319,7 @@ function BoardRow({
         <span className="dim">
           {d.region}
           {d.admin ? ` · ${d.admin}` : ''} · {f.height(elevationFor(d, 'mid'))}
+          <span className="passes"> · {passShort(d)}</span>
         </span>
       </th>
       <td>

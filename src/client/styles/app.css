@@ -421,6 +421,17 @@
   font-weight: 500;
 }
 
+.board-pass {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.board-pass .seg {
+  flex: none;
+}
 .board-controls {
   display: flex;
   justify-content: space-between;
@@ -1314,6 +1325,12 @@ th[aria-sort] .th-sort {
   gap: 16px;
   margin-bottom: 14px;
   flex-wrap: wrap;
+}
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  max-width: 100%;
 }
 .snow-map {
   height: calc(100vh - 230px);

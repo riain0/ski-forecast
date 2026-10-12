@@ -127,8 +127,8 @@ export function MethodPage() {
             </li>
           </ul>
           <p className="footnote">
-            Independent project, not affiliated with Ikon Pass or Alterra Mountain Company. Check resort
-            reports and your avalanche center before heading out.
+            Independent project, not affiliated with any ski pass or resort operator. Check resort reports and
+            your avalanche center before heading out.
           </p>
         </Section>
       </div>

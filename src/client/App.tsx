@@ -60,8 +60,7 @@ export function App() {
           ItaliaMeteo) · NOAA NWS · USDA NRCS SNOTEL · avalanche.org · Map tiles © Esri
         </p>
         <p>
-          Not affiliated with Ikon Pass or Alterra Mountain Company. Check official resort reports before you
-          go.
+          Not affiliated with any ski pass or resort operator. Check official resort reports before you go.
         </p>
       </footer>
     </>

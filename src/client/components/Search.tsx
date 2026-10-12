@@ -3,6 +3,7 @@ import { DESTINATIONS } from '#shared/destinations';
 import type { GeocodeResult } from '#shared/types';
 import { geocode } from '../api/data';
 import { formatters } from '../lib/format';
+import { passShort } from '../lib/passes';
 import { setPrefs, usePrefs } from '../lib/prefs';
 import { hrefFor, navigate } from '../lib/router';
 
@@ -60,7 +61,7 @@ export function Search() {
         .map(d => ({
           key: d.id,
           title: d.name,
-          detail: d.admin ? `${d.region} · ${d.admin}` : d.region,
+          detail: `${d.admin ? `${d.region} · ${d.admin}` : d.region} · ${passShort(d)}`,
           href: hrefFor.destination(d.id),
         }))
     : [];
@@ -162,7 +163,7 @@ export function Search() {
       </kbd>
       {open && (q || saved.length > 0) && (
         <ul id={listId} role="listbox" className="search__list">
-          {group('On the pass', mountains, 0)}
+          {group('Mountains', mountains, 0)}
           {group('Saved spots', saved, mountains.length)}
           {group('Anywhere', found, mountains.length + saved.length)}
           {searching && <li className="search__group">Searching places…</li>}

@@ -1,6 +1,7 @@
 # Upslope
 
-Mountain snow forecasts for every Ikon Pass destination (2026/27): every major weather model side by side,
+Mountain snow forecasts for about 200 ski areas (2026/27): every Ikon and Epic Pass destination, Mountain
+Collective partners and notable independent US mountains, filterable by pass. Every major weather model side by side,
 ensemble odds, the NWS forecasters' own words, measured snowpack and avalanche danger, at the elevation
 you actually ski.
 
@@ -28,7 +29,7 @@ src/
     openmeteo/       request builders, pure response processors, client with an injected fetcher
     snow.ts          rain/snow partition + snow-to-liquid ratio
     models.ts        model catalogue, regional domains, request batching
-    destinations.ts  Ikon 2026/27 destinations with base/summit elevations
+    destinations.ts  ski areas for 2026/27 with base/summit elevations and the passes they're on
   server/          Hono on Node
     http.ts          fetcher: per-host concurrency limits, rate-limit cooldowns
     cache.ts         stale-while-revalidate cache with request coalescing
@@ -94,6 +95,7 @@ the `CNAME` record Render shows you at your DNS provider.
 
 ## Notes
 
-- The destination list is from ikonpass.com (checked October 2026). Partners change most seasons; edit
-  `src/shared/destinations.ts`.
-- Independent project, not affiliated with Ikon Pass or Alterra Mountain Company.
+- The destination list is from ikonpass.com and epicpass.com, plus Mountain Collective and Indy partner
+  lists (checked October 2026). Indy tags cover only the mountains listed here, not the whole Indy network.
+  Partners change most seasons; edit `src/shared/destinations.ts`.
+- Independent project, not affiliated with any ski pass or resort operator.
